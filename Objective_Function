@@ -1,0 +1,52 @@
+# Define the objective function to balance goals:
+def objective(X, p, T, W, w1=1, w2=1, w3=1, w4=1):
+    return -w1 * X + w2 * (1 - p) + w3 * (T / T0) + w4 * (W / 50)
+
+# Apply constraints
+valid_indices = np.where((T_vals <= 650) & (Wspan <= 50) & (X_vals >= 0.15))[0]
+
+if len(valid_indices) > 0:
+    obj_vals = [
+        objective(X_vals[i], p_vals[i], T_vals[i], Wspan[i])
+        for i in valid_indices
+    ]
+    best_idx = valid_indices[np.argmin(obj_vals)]
+
+    print("✅ Optimal Operating Conditions:")
+    print(f"Weight of Catalyst: {Wspan[best_idx]:.2f} kg")
+    print(f"Conversion: {X_vals[best_idx] * 100:.2f}%")
+    print(f"Pressure Ratio: {p_vals[best_idx]:.3f}")
+    print(f"Temperature: {T_vals[best_idx]:.2f} K")
+    print(f"Objective Value: {obj_vals[np.argmin(obj_vals)]:.4f}")
+else:
+    print("⚠️ No solution meets all constraints.")
+
+# Normalization and weights
+Tmax = 650
+Wmax = 50
+a = 0.5  # Weight for temperature penalty
+b = 0.5  # Weight for weight penalty
+
+# Only evaluate up to Wmax
+mask = Wspan <= Wmax
+W_plot = Wspan[mask]
+X_plot = X_vals[mask]
+T_plot = T_vals[mask]
+
+# Compute objective
+objective_vals = X_plot - a * (T_plot / Tmax) - b * (W_plot / Wmax)
+
+# 3D plot
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(111, projection='3d')
+ax.plot(W_plot, T_plot, objective_vals, color='purple', label='Objective Function')
+
+# Labels
+ax.set_xlabel("Catalyst Weight (W) [kg]")
+ax.set_ylabel("Temperature (K)")
+ax.set_zlabel("Objective Function Value")
+ax.set_title("3D Objective Function Plot")
+ax.legend()
+
+plt.tight_layout()
+plt.show()
