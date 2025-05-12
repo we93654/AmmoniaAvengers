@@ -1,0 +1,99 @@
+import numpy as np  
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+
+# Constants
+R = 8.314  # J/mol·K
+deltaH_rxn = -75000  # J/mol (exothermic reaction, negative sign)
+Cp_mix = 100  # J/mol·K
+Cao = 0.25  # mol/L
+alpha = 0.01  # 1/kg
+yao = 0.25
+s = -0.5
+epsilon = yao * s
+thetaB = (1 - yao) / yao
+A = 12.61
+Ea = 10.9E3  # J/mol
+vo = 1000  # L/s
+Wspan = np.linspace(0, 80, 1000)  # kg catalyst
+
+# Define temperature-dependent Keq using van 't Hoff equation
+def Keq_T(T):
+    T_ref = 453  # reference temperature in K
+    Keq_ref = 0.2  # known equilibrium constant at T_ref
+    C = np.log(Keq_ref) + (deltaH_rxn / (R * T_ref))
+    return np.exp(-deltaH_rxn / (R * T) + C)
+
+# ODE system including equilibrium and energy balance
+def ODEfun(Yfuncvec, W, A, Ea, R, Cao, alpha, yao, vo, deltaH_rxn, Cp_mix):
+    X, p, T = Yfuncvec
+    epsilon = yao * s
+    thetaB = (1 - yao) / yao
+    Fa0 = Cao * vo
+
+    Kf = A * np.exp(-Ea / (R * T))
+    Keq = Keq_T(T)
+
+    Ca = Cao * (1 - X) * p / (1 + epsilon * X)
+    Cb = Cao * (3 * thetaB - 3 * X) * p / (1 + epsilon * X)
+    Cc = Cao * X * p / (1 + epsilon * X)
+
+    ra = Kf * (Ca * Cb ** 3 - Cc ** 2 / Keq)
+
+    dXdW = ra / Fa0
+    dpdW = -alpha * (1 + epsilon * X) / (2 * p)
+    dTdW = (-deltaH_rxn * ra) / (Fa0 * Cp_mix)
+
+    return [dXdW, dpdW, dTdW]
+
+# Sweep over a range of initial temperatures
+T0_values = np.linspace(400, 600, 20)
+X_final_values = []
+
+for T0 in T0_values:
+    y0 = [0, 1, T0]
+    sol = odeint(ODEfun, y0, Wspan, args=(A, Ea, R, Cao, alpha, yao, vo, deltaH_rxn, Cp_mix))
+    X_final = sol[-1, 0]
+    X_final_values.append(X_final)
+
+# Plot the effect of initial temperature on conversion
+plt.figure(figsize=(8, 5))
+plt.plot(T0_values, X_final_values, marker='o', color='teal')
+plt.xlabel("Initial Temperature T₀ (K)")
+plt.ylabel("Final Conversion (X) at W = 80 kg")
+plt.title("Effect of Initial Temperature on Ammonia Conversion")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Initial temperature
+T0 = 453
+y0 = [0, 1, T0]
+
+# Solve the ODE system
+sol = odeint(ODEfun, y0, Wspan, args=(A, Ea, R, Cao, alpha, yao, vo, deltaH_rxn, Cp_mix))
+X_vals = sol[:, 0]
+p_vals = sol[:, 1]
+T_vals = sol[:, 2]
+
+# Plotting all 3 together
+fig, axs = plt.subplots(3, 1, figsize=(8, 12), sharex=True)
+
+axs[0].plot(Wspan, X_vals, color='darkblue')
+axs[0].set_ylabel("Conversion (X)")
+axs[0].set_title("Conversion vs Catalyst Weight")
+axs[0].grid(True)
+
+axs[1].plot(Wspan, p_vals, color='darkred')
+axs[1].set_ylabel("Pressure (p)")
+axs[1].set_title("Pressure vs Catalyst Weight")
+axs[1].grid(True)
+
+axs[2].plot(Wspan, T_vals, color='darkgreen')
+axs[2].set_xlabel("Weight of Catalyst (W) [kg]")
+axs[2].set_ylabel("Temperature (K)")
+axs[2].set_title("Temperature vs Catalyst Weight")
+axs[2].grid(True)
+
+plt.tight_layout()
+plt.show()
