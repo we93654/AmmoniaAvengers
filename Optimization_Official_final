@@ -46,26 +46,6 @@ def ODEfun(Yfuncvec, W, A, Ea, R, Cao, alpha, yao, vo, deltaH_rxn, Cp_mix):
 
     return [dXdW, dpdW, dTdW]
 
-# Sweep over a range of initial temperatures
-T0_values = np.linspace(400, 600, 20)
-X_final_values = []
-
-for T0 in T0_values:
-    y0 = [0, 1, T0]
-    sol = odeint(ODEfun, y0, Wspan, args=(A, Ea, R, Cao, alpha, yao, vo, deltaH_rxn, Cp_mix))
-    X_final = sol[-1, 0]
-    X_final_values.append(X_final)
-
-# Plot the effect of initial temperature on conversion
-plt.figure(figsize=(8, 5))
-plt.plot(T0_values, X_final_values, marker='o', color='teal')
-plt.xlabel("Initial Temperature T₀ (K)")
-plt.ylabel("Final Conversion (X) at W = 80 kg")
-plt.title("Effect of Initial Temperature on Ammonia Conversion")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
 # Initial temperature
 T0 = 453
 y0 = [0, 1, T0]
