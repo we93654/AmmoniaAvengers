@@ -1,0 +1,65 @@
+import numpy as np
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+
+# Constants
+R = 8.314
+deltaH_rxn = -75000  # J/mol
+Cp_mix = 100
+Cao = 0.25  # mol/L
+alpha = 0.01
+yao = 0.25
+s = -0.5
+epsilon = yao * s
+thetaB = (1 - yao) / yao
+A = 12.61
+Ea = 10.9E3
+vo = 1000  # L/s
+T0 = 453  # K
+
+# Keq as function of T
+def Keq_T(T):
+    T_ref = 453
+    Keq_ref = 0.2
+    C = np.log(Keq_ref) + (deltaH_rxn / (R * T_ref))
+    return np.exp(-deltaH_rxn / (R * T) + C)
+
+# ODEs
+def ODEfun(Yfuncvec, W, A, Ea, R, Cao, alpha, yao, vo, deltaH_rxn, Cp_mix):
+    X, p, T = Yfuncvec
+    epsilon = yao * s
+    thetaB = (1 - yao) / yao
+    Cao= 
+    Fa0 = Cao * vo
+    Kf = A * np.exp(-Ea / (R * T))
+    Keq = Keq_T(T)
+    Ca = Cao * (1 - X) * p / (1 + epsilon * X)
+    Cb = Cao * (3 * thetaB - 3 * X) * p / (1 + epsilon * X)
+    Cc = Cao * X * p / (1 + epsilon * X)
+    ra = Kf * (Ca * Cb ** 3 - Cc ** 2 / Keq)
+    dXdW = ra / Fa0
+    dpdW = -alpha * (1 + epsilon * X) / (2 * p)
+    dTdW = (-deltaH_rxn * ra) / (Fa0 * Cp_mix)
+    return [dXdW, dpdW, dTdW]
+
+# Simulation parameters
+Wspan = np.linspace(0, 30, 300)  # Catalyst weight span
+pressure_range = np.linspace(0.1, 200, 100)  # Avoid 0 to prevent divide-by-zero
+conversions = []
+
+# Run simulation for each pressure
+for p0 in pressure_range:
+    y0 = [0, p0, T0]
+    sol = odeint(ODEfun, y0, Wspan, args=(A, Ea, R, Cao, alpha, yao, vo, deltaH_rxn, Cp_mix))
+    X_final = sol[-1, 0]
+    conversions.append(X_final)
+
+# Plotting
+plt.figure(figsize=(8,6))
+plt.plot(pressure_range, conversions, color='darkblue')
+plt.xlabel("Initial Pressure (atm)")
+plt.ylabel("Final Conversion")
+plt.title("Conversion vs Initial Pressure")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
